@@ -47,6 +47,10 @@ const useRecommendation = () => {
             if (params.favorites_only) {
                 queryParams.append('favorites_only', 'true');
             }
+            // Add Class ID to query params
+            if (params.class_id) {
+                queryParams.append('class_id', params.class_id);
+            }
 
             const url = `survey/products/${productName}?${queryParams.toString()}`;
 

@@ -32,7 +32,7 @@ import InfoIcon from '@mui/icons-material/Info';
 const PRODUCTS_PER_PAGE = 12;
 
 const EducationalProduct = () => {
-    const { productCode } = useParams();
+    const { productCode, classId } = useParams();
     const { fetchSpecificProducts } = useRecommendation();
 
     // --- REVISED STATE MANAGEMENT FOR PAGINATION ---
@@ -61,7 +61,6 @@ const EducationalProduct = () => {
     const role = userInfo.role || '';
 
     // --- CENTRALIZED DATA FETCHING EFFECT ---
-    // This effect now runs whenever the page, search term, or sort option changes.
     // Handle favorites filter toggle
     const handleFavoritesToggle = () => {
         if (role === 'Professor') {
@@ -85,7 +84,8 @@ const EducationalProduct = () => {
                     offset: (currentPage - 1) * PRODUCTS_PER_PAGE,
                     searchTerm: searchTerm,
                     sort: sortOption,
-                    favorites_only: showFavoritesOnly 
+                    favorites_only: showFavoritesOnly,
+                    class_id: classId
                 };
                 
                 // Fetch data using the new parameters
@@ -107,7 +107,7 @@ const EducationalProduct = () => {
 
         return () => controller.abort();
 
-    }, [productCode, currentPage, searchTerm, sortOption, showFavoritesOnly, fetchSpecificProducts]);
+    }, [productCode, currentPage, searchTerm, sortOption, showFavoritesOnly, fetchSpecificProducts, classId]);
 
     // Calculate total pages based on the count from the API
     const totalPages = Math.ceil(totalCount / PRODUCTS_PER_PAGE);
@@ -161,11 +161,6 @@ const EducationalProduct = () => {
     useEffect(() => {
         const tutorialKey = `tutorial_educational_product_seen_${role}_${productCode}`;
         const hasSeen = localStorage.getItem(tutorialKey);
-        
-        // Check if this is the first visit and auto-open tutorial
-        // if (!hasSeen && role && productCode) {
-        //    setShowTutorial(true);
-        // }
         
         setIsComponentMounted(true);
     }, [role, productCode]);
@@ -238,7 +233,6 @@ const EducationalProduct = () => {
     const steps = getTutorialSteps();
 
     // --- UPDATE LOCAL STATE FOR USER ACTIONS ---
-    // These functions now update the `products` state array directly.
     const handleProfessorRecommendationClick = async (productId) => {
         const result = await registerRecommendation(productId);
         if (result.success) {
@@ -297,10 +291,10 @@ const EducationalProduct = () => {
             
             <div className="educational-product-container">
                 <div>
-                    <p className="primary-heading">{ data[productCode].name }</p>
+                    <p className="primary-heading">{ data[productCode] ? data[productCode].name : productCode }</p>
                 </div>
                 <div className="educational-product-description">
-                    <Description product={data[productCode]}/>
+                    {data[productCode] && <Description product={data[productCode]}/>}
                 </div>
                 <div className="search-and-sort-container">
                     <div className="search-bar-container">

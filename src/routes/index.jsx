@@ -111,6 +111,14 @@ const AppRouter = () => {
                         }
                     />
                     <Route
+                        path="/educational-product/:productCode/class/:classId"
+                        element={
+                            <PrivateRoute roles={["Professor"]}>
+                                <EducationalProduct />
+                            </PrivateRoute>
+                        }
+                    />
+                    <Route
                         path="/methodology/:methodologyCode"
                         element={
                             <PrivateRoute roles={["Professor"]}>

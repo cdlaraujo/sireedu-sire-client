@@ -1,6 +1,6 @@
 export default {
-    //baseUrl: 'http://localhost:8000/api/v1',
-    baseUrl: "https://sireedu-server-acb1c893f21b.herokuapp.com/api/v1",
+    baseUrl: 'http://localhost:8000/api/v1',
+    // baseUrl: "https://sireedu-server-acb1c893f21b.herokuapp.com/api/v1",
     authTokenUrl: "/auth",
     authTokenRefreshUrl: "/auth-refresh",
     passwordResetRequestUrl: "/password-reset/",
