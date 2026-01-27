@@ -1,5 +1,3 @@
-// Professor.jsx
-
 import React, { useEffect, useState } from "react";
 import "./styles.css";
 import config from "../../services/config";
@@ -8,47 +6,57 @@ import DataTable from "./DataTable";
 import PageTitleUpdater from "../../components/PageTitleUpdater";
 import { useNavigate } from "react-router-dom";
 import RecommendationGroup from "../../components/RecommendationGroup";
-import ImportantDevicesIcon from '@mui/icons-material/ImportantDevices';
-import ExtensionIcon from '@mui/icons-material/Extension';
-import ExportCSV from "../../components/ExportCSV";
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import Skeleton from '@mui/material/Skeleton';
 import TutorialGuide, { useIsMobile } from "../../components/TutorialGuide/TutorialGuide";
 import HelpButton from "../../components/HelpButton/HelpButton";
 import MobileHelpButton from "../../components/MobileHelpButton/MobileHelpButton";
+import ExportCSV from "../../components/ExportCSV";
+
+// Material UI Components for the Cards
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import CardActionArea from '@mui/material/CardActionArea';
+import Typography from '@mui/material/Typography';
+import Grid from '@mui/material/Grid';
+import SchoolIcon from '@mui/icons-material/School';
+import Button from '@mui/material/Button';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ImportantDevicesIcon from '@mui/icons-material/ImportantDevices';
+import ExtensionIcon from '@mui/icons-material/Extension';
 
 const Professor = () => {
     const { fetchEntryPoint } = useFetch();
-    const [availableClassroomStudy, setAvailableClassroomStudy] = useState(null);
-    const [studiesAnswered, setStudiesAnswered] = useState(null);
-    const [classDescription, setClassDescription] = useState("");
-    const [csvData, setCsvData] = useState([]);
-    const [loading, setLoading] = useState(true);
     
-    // Estados para controlar a exibição e navegação do tutorial
+    // --- STATE MANAGEMENT ---
+    const [availableClassroomStudy, setAvailableClassroomStudy] = useState([]); // All data
+    const [uniqueClasses, setUniqueClasses] = useState([]); // Just the class list
+    const [selectedClass, setSelectedClass] = useState(null); // THE SWITCH: null = List, object = Dashboard
+    
+    const [loading, setLoading] = useState(true);
     const [showTutorial, setShowTutorial] = useState(false);
     const [currentTutorialStep, setCurrentTutorialStep] = useState(0);
 
     const navigate = useNavigate();
     const isMobile = useIsMobile();
 
-    const createData = (id, year, semester, sclass, study, totalStudents, totalAnswers, relatory) => {
-        return { id, year, semester, sclass, study, totalAnswers, totalStudents, relatory };
+    // Helper to format data coming from API
+    const createData = (id, year, semester, sclass, study, totalStudents, totalAnswers, relatory, classId) => {
+        return { id, year, semester, sclass, study, totalAnswers, totalStudents, relatory, classId };
     }
 
+    // --- FETCH DATA (Run once on load) ---
     useEffect(() => {
         const controller = new AbortController();
         const handleFetch = async () => {
             setLoading(true);
             try {
                 const { role } = JSON.parse(localStorage.getItem(config.tokenName));
+                
+                // 1. Fetch EVERYTHING
                 const studies = await fetchEntryPoint(role, controller);
 
-                setClassDescription(studies[0].sclass.description);
-                setStudiesAnswered(studies.map((studie) => 
-                    studie.total_answered > 0 ? true : false
-                ));
-
+                // 2. Prepare Table Data (Add classId to each row so we can filter later)
                 const newRows = studies.map((classStudy, index) => 
                     createData(
                         index,
@@ -58,24 +66,26 @@ const Professor = () => {
                         classStudy.study.description,
                         classStudy.total_students,
                         classStudy.total_answered,
-                        { classId: classStudy.sclass.id, studyId: classStudy.study.id }
+                        { classId: classStudy.sclass.id, studyId: classStudy.study.id },
+                        classStudy.sclass.id // We save this ID to filter the table later!
                     )
                 );
                 setAvailableClassroomStudy(newRows);
 
-                let newCsvData = [];
-                newRows.map((row) => (
-                    newCsvData.push(
-                        { 
-                            ano: row.year, 
-                            semestre: row.semester,
-                            turma: row.sclass,
-                            estudo: row.study,
-                            respostas: `${row.totalAnswers}/${row.totalStudents}`,
-                        }
-                    )
-                ));
-                setCsvData(newCsvData);
+                // 3. Extract Unique Classes for the Cards
+                const classesMap = new Map();
+                studies.forEach(item => {
+                    if (!classesMap.has(item.sclass.id)) {
+                        classesMap.set(item.sclass.id, {
+                            id: item.sclass.id,
+                            description: item.sclass.description,
+                            year: item.sclass.year,
+                            semester: item.sclass.semester,
+                            code: item.sclass.code
+                        });
+                    }
+                });
+                setUniqueClasses(Array.from(classesMap.values()));
 
             } catch (error) {
                 if (error.name !== 'AbortError') {
@@ -83,163 +93,231 @@ const Professor = () => {
                 }
             } finally {
                 setLoading(false);
-                
             }
         }
 
         handleFetch();
-
         return () => controller.abort();
     }, []);
+
+    // --- HANDLERS ---
     
-    /**
-     * Define os passos do tutorial com base no estado atual do componente
-     * Cada passo contém um seletor CSS para o elemento alvo, um título e uma descrição
-     */
+    // Switch to Dashboard View
+    const handleClassSelect = (classItem) => {
+        setSelectedClass(classItem);
+        window.scrollTo(0, 0); // Scroll to top
+    };
+
+    // Switch back to Card View
+    const handleBackToSelection = () => {
+        setSelectedClass(null);
+    };
+
+    // --- RENDER HELPERS ---
+
+    // Filter the big table data to show only the selected class
+    const filteredRows = selectedClass 
+        ? availableClassroomStudy.filter(row => row.classId === selectedClass.id)
+        : [];
+
+    // Prepare CSV data for the selected class
+    const csvData = filteredRows.map((row) => ({
+        ano: row.year, 
+        semestre: row.semester,
+        turma: row.sclass,
+        estudo: row.study,
+        respostas: `${row.totalAnswers}/${row.totalStudents}`,
+    }));
+
+    // Tutorial Steps Logic
     const getTutorialSteps = () => {
-        const steps = [
-            {
-                targetSelector: '.professor-header',
-                title: 'Bem-vindo ao SIREEDU',
-                description: 'Esta é sua página inicial como professor, onde você terá acesso aos resultados dos estudos de suas turmas e poderá acompanhar o progresso dos alunos.'
-            },
-            {
-                targetSelector: '.about-section-text-container',
-                title: 'Informações da Turma',
-                description: 'Aqui você encontra informações sobre o levantamento do perfil cognitivo da sua turma, baseado nos questionários respondidos pelos alunos.'
-            },
-            {
-                targetSelector: '.about-section-text-container',
-                title: 'Estudos Disponíveis',
-                description: 'Esta página mostra os estudos disponíveis para sua turma, o número total de alunos e quantos já responderam cada questionário. Você pode exportar estes dados em formato CSV para análise externa.'
-            }
-        ];
-        
-        // Adiciona um passo específico para as recomendações apenas se ambos os estudos tiverem respostas
-        if (studiesAnswered && studiesAnswered[0] && studiesAnswered[1]) {
-            steps.push({
-                targetSelector: '[data-tutorial="materiais-de-apoio"]',
-                title: 'Recomendações para Ensino',
-                description: 'Com base nos resultados dos estudos, você tem acesso a recomendações de "Produtos Educacionais", "Metodologias de Ensino" e "Materiais de Apoio" adaptados ao perfil de aprendizagem específico da sua turma. Clique em Produtos Educacionais para ver as recomendações.'
-            });
-        } else if (studiesAnswered) {
-            steps.push({
-                targetSelector: '[data-tutorial="materiais-de-apoio"]',
-                title: 'Materiais de Apoio',
-                description: 'Aqui você encontra materiais de apoio que podem auxiliar no processo de ensino. Para ter acesso às recomendações completas, incentive seus alunos a responderem todos os questionários disponíveis.'
-            });
+        if (!selectedClass) {
+            return [
+                {
+                    targetSelector: '.professor-header',
+                    title: 'Seleção de Turmas',
+                    description: 'Bem-vindo! Aqui você vê todas as suas turmas cadastradas.'
+                },
+                {
+                    targetSelector: '.MuiCard-root',
+                    title: 'Cartão da Turma',
+                    description: 'Clique em um cartão para acessar os relatórios e recomendações específicos daquela turma.'
+                }
+            ];
+        } else {
+            return [
+                {
+                    targetSelector: '.professor-header',
+                    title: 'Painel da Turma',
+                    description: 'Aqui você visualiza os dados detalhados da turma selecionada.'
+                },
+                {
+                    targetSelector: '.professor-datatable-section',
+                    title: 'Relatórios',
+                    description: 'Acesse os relatórios Sintético e Analítico para ver o perfil dos alunos.'
+                },
+                {
+                    targetSelector: '[data-tutorial="materiais-de-apoio"]',
+                    title: 'Recomendações',
+                    description: 'Com base nos resultados, o sistema gera recomendações de materiais e metodologias.'
+                }
+            ];
         }
-        
-        return steps;
     };
-    
-    /**
-     * Manipulador para fechar o tutorial
-     */
-    const handleTutorialClose = () => {
-        setShowTutorial(false);
-    };
-    
-    /**
-     * Manipulador para quando o tutorial é concluído
-     * Marca no localStorage que o tutorial já foi visto
-     */
-    const handleTutorialComplete = () => {
-        localStorage.setItem('tutorial_professor_seen', 'true');
-        setShowTutorial(false);
-    };
-    
-    /**
-     * Manipulador para abrir o tutorial manualmente através do botão de ajuda
-     */
-    const handleOpenTutorial = () => {
-        setCurrentTutorialStep(0); // Reinicia o tutorial do primeiro passo
-        setShowTutorial(true);
-    };
-    
-    /**
-     * Manipulador para mudança de passo no tutorial
-     */
-    const handleStepChange = (stepIndex) => {
-        setCurrentTutorialStep(stepIndex);
-    };
-    
+
+    // --- COMPONENT RENDER ---
     return (
         <div className="professor">
             <PageTitleUpdater title={"Início"} />
             <div className="professor-container">
-                <div className="professor-header">
-                    <p className="primary-heading">Estudos Disponíveis</p>
-                </div>
-                <div className="about-section-text-container">
-                    <div className="professor-text-section border-red-color fade-in">
-                        <p className="secondary-text">
-                            Apresentamos o resultado do levantamento do perfil 
-                            cognitivo da sua turma de <span style={{ textTransform: 'capitalize' }}>{ classDescription }</span>. 
-                            Os instrumentos utilizados foram o questionário de estilos de aprendizagem de Honey-Alonso e o 
-                            inventário das inteligências múltiplas de Armstrong.
-                        </p>
-                    </div>
-                </div>
-                <div className="professor-datatable-section">
-                {availableClassroomStudy && !loading ? (
-                    <div >
-                        <ExportCSV data={csvData} filename="estudos.csv"/>
-                        <DataTable rows={availableClassroomStudy} data-tutorial="data-table"/>
-                    </div>
-                ) : (
-                    <Skeleton
-                        variant="rectangular"
-                        height={230}
-                        style={{ borderRadius: 5 }}
-                    />
+                
+                {/* === VIEW 1: CLASS SELECTION (PRE-ROOM) === */}
+                {!selectedClass && (
+                    <>
+                        <div className="professor-header">
+                            <p className="primary-heading">Minhas Turmas</p>
+                            <p className="secondary-text">Selecione uma turma para visualizar os relatórios e recomendações.</p>
+                        </div>
+
+                        {loading ? (
+                            <Skeleton variant="rectangular" height={200} sx={{mt: 2, borderRadius: 2}} />
+                        ) : (
+                            <Grid container spacing={3} justifyContent="center" sx={{ marginTop: '1rem' }}>
+                                {uniqueClasses.map((cls) => (
+                                    <Grid item xs={12} sm={6} md={4} key={cls.id}>
+                                        <Card 
+                                            sx={{ 
+                                                height: '100%', 
+                                                display: 'flex', 
+                                                flexDirection: 'column',
+                                                transition: '0.3s',
+                                                borderRadius: '12px',
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                                                '&:hover': { transform: 'scale(1.03)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' } 
+                                            }}
+                                        >
+                                            <CardActionArea 
+                                                onClick={() => handleClassSelect(cls)} 
+                                                sx={{ height: '100%', p: 2 }}
+                                            >
+                                                <CardContent sx={{ textAlign: 'center' }}>
+                                                    <SchoolIcon sx={{ fontSize: 50, color: '#40A3A6', mb: 2 }} />
+                                                    <Typography gutterBottom variant="h5" component="div" sx={{fontWeight: 600, color: '#4c4c4c'}}>
+                                                        {cls.description}
+                                                    </Typography>
+                                                    <Typography variant="body2" color="text.secondary" sx={{mb: 1}}>
+                                                        Código: {cls.code}
+                                                    </Typography>
+                                                    <div style={{marginTop: '10px', display: 'inline-block', padding: '4px 12px', backgroundColor: '#e0f2f1', borderRadius: '16px', color: '#00695c', fontSize: '0.8rem', fontWeight: 600}}>
+                                                        {cls.year} • {cls.semester}º Semestre
+                                                    </div>
+                                                </CardContent>
+                                            </CardActionArea>
+                                        </Card>
+                                    </Grid>
+                                ))}
+                            </Grid>
+                        )}
+                    </>
                 )}
-                </div>
-                <div data-tutorial="recommendation-group">
-                    <div className="professor-text-section border-orange-color fade-in">
-                        <p className="secondary-text">
-                            Mais informações sobre os estudos disponíveis nos links abaixo:
-                        </p>
-                    </div >
-                    <div data-tutorial="materiais-de-apoio">
-                        <RecommendationGroup data-tutorial="materiais-de-apoio"
-                            recommendations={
-                                [
-                                    {
-                                        id: 3,
-                                        title: 'Materiais de Apoio',
-                                        color: 'red-color',
-                                        background: 'bg-red',
-                                        icon: <MenuBookIcon />,
-                                    }
-                                ]
-                            }
-                            navigate={navigate}
-                        />   
+
+                {/* === VIEW 2: DASHBOARD (SELECTED CLASS) === */}
+                {selectedClass && (
+                    <div className="fade-in">
+                        <Button 
+                            startIcon={<ArrowBackIcon />} 
+                            onClick={handleBackToSelection}
+                            sx={{ mb: 2, color: '#40A3A6', fontWeight: 600 }}
+                        >
+                            Voltar para Turmas
+                        </Button>
+
+                        <div className="professor-header">
+                            <p className="primary-heading">Painel da Turma</p>
+                            <h3 style={{ textAlign: 'center', color: '#666', marginTop: '0.5rem' }}>
+                                {selectedClass.description}
+                            </h3>
+                        </div>
+
+                        <div className="about-section-text-container">
+                            <div className="professor-text-section border-red-color">
+                                <p className="secondary-text">
+                                    Abaixo estão os estudos disponíveis para esta turma. Os instrumentos utilizados foram o questionário de 
+                                    estilos de aprendizagem de Honey-Alonso e o inventário das inteligências múltiplas de Armstrong.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="professor-datatable-section">
+                            <ExportCSV data={csvData} filename={`estudos_${selectedClass.code}.csv`}/>
+                            <DataTable rows={filteredRows} />
+                        </div>
+
+                        <div data-tutorial="recommendation-group">
+                            <div className="professor-text-section border-orange-color">
+                                <p className="secondary-text">
+                                    Acesse as recomendações personalizadas para sua turma e materiais de apoio:
+                                </p>
+                            </div >
+                            <div data-tutorial="materiais-de-apoio">
+                                <RecommendationGroup 
+                                    navigate={navigate}
+                                    // Custom handler to include the Class ID in the URL
+                                    onCardClick={(recId) => {
+                                        if (recId === 3) {
+                                            // Support Materials (No class ID needed)
+                                            navigate(`/recommendation/${recId}`);
+                                        } else {
+                                            // Products (1) and Methodologies (2) NEED Class ID
+                                            navigate(`/recommendation/${recId}/class/${selectedClass.id}`);
+                                        }
+                                    }}
+                                    recommendations={[
+                                        {
+                                            id: 1,
+                                            title: 'Produtos Educacionais',
+                                            color: 'ligth-blue-color',
+                                            background: 'bg-ligth-blue',
+                                            icon: <ImportantDevicesIcon />,
+                                        },
+                                        {
+                                            id: 2,
+                                            title: 'Metodologias de Ensino',
+                                            color: 'primary-color',
+                                            background: 'bg-primary-color',
+                                            icon: <ExtensionIcon />,
+                                        },
+                                        {
+                                            id: 3,
+                                            title: 'Materiais de Apoio',
+                                            color: 'red-color',
+                                            background: 'bg-red',
+                                            icon: <MenuBookIcon />,
+                                        }
+                                    ]}
+                                />   
+                            </div>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
             
-            {/* Componente de Tutorial - Exibido apenas quando showTutorial for true */}
+            {/* Tutorial & Help Buttons */}
             <TutorialGuide 
                 steps={getTutorialSteps()}
                 isOpen={showTutorial}
-                onClose={handleTutorialClose}
-                onComplete={handleTutorialComplete}
+                onClose={() => setShowTutorial(false)}
+                onComplete={() => setShowTutorial(false)}
                 currentStep={currentTutorialStep}
-                onStepChange={handleStepChange}
+                onStepChange={setCurrentTutorialStep}
             />
             
-            {/* Botão de Ajuda - Sempre visível no canto da tela */}
             {!isMobile ? (
-            <div className="help-button-wrapper">
-                <HelpButton
-                    onClick={handleOpenTutorial}
-                    className="visible-help-button"
-                />
-            </div>
+                <div className="help-button-wrapper">
+                    <HelpButton onClick={() => setShowTutorial(true)} className="visible-help-button" />
+                </div>
             ) : (
-            <MobileHelpButton onClick={handleOpenTutorial} />
+                <MobileHelpButton onClick={() => setShowTutorial(true)} />
             )}
         </div>
     );

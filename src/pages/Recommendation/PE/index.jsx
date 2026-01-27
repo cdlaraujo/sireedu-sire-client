@@ -17,14 +17,14 @@ const PE = ({ role, classId }) => {
         const handleFetch = async () => {
             setLoading(true);
             try {
-                if (role === "Student") { // Corrigido: 'Student' deve ser string
+                if (role === "Student") {
                     const { selectedProducts } = await fetchStudentProducts(controller.signal);
                     const { allProducts } = await fetchAllProductsforStudents(controller.signal);
                     
                     // Combina todos os produtos únicos
                     const allUniqueProducts = [...selectedProducts];
-                    allProducts.forEach(item => { // Corrigido: '=>' no forEach
-                        if (!selectedProducts.some(product => item.id === product.id)) { // Corrigido: '=>' na função de 'some'
+                    allProducts.forEach(item => {
+                        if (!selectedProducts.some(product => item.id === product.id)) {
                             allUniqueProducts.push(item);
                         }
                     });
@@ -33,21 +33,20 @@ const PE = ({ role, classId }) => {
                     setSelectedProducts(allUniqueProducts.slice(0, 6));
                     setAllProducts(allUniqueProducts.slice(6, 9));
 
-                } else if (role === "Professor") { // Corrigido: 'Professor' deve ser string
+                } else if (role === "Professor") {
                     const { selectedProducts } = await fetchProfessorProducts(classId, controller.signal);
                     const { allProducts } = await fetchAllProductsforProfessor(classId, controller.signal);
                     
                     // Combina todos os produtos (sem filtrar por id, pois a lógica de Professor trata os arrays separadamente)
-                    // Pela lógica anterior, a intenção era combinar e então filtrar duplicatas (como feito em Student)
                     const combinedProducts = [...selectedProducts];
-                    allProducts.forEach(item => { // Corrigido: '=>' no forEach
-                        if (!selectedProducts.some(product => item.id === product.id)) { // Corrigido: '=>' na função de 'some'
+                    allProducts.forEach(item => {
+                        if (!selectedProducts.some(product => item.id === product.id)) {
                             combinedProducts.push(item);
                         }
                     });
                     
                     // Ordena por score (maior primeiro)
-                    const sortedProducts = combinedProducts.sort((a, b) => b.score - a.score); // Corrigido: '=>' na função de sort
+                    const sortedProducts = combinedProducts.sort((a, b) => b.score - a.score);
                     
                     // Redistribui 6 primeiros e 3 restantes
                     setSelectedProducts(sortedProducts.slice(0, 6));
@@ -76,7 +75,13 @@ const PE = ({ role, classId }) => {
     }, []);
 
     const handleClick = (code) => { 
-        navigate(`/educational-product/${code}`); 
+        if (role === "Professor" && classId) {
+            // Include classId in the URL for professors
+            navigate(`/educational-product/${code}/class/${classId}`);
+        } else {
+            // Default behavior for students
+            navigate(`/educational-product/${code}`);
+        }
     }
 
     return (
