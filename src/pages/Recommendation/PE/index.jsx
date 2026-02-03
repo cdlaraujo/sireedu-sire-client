@@ -21,7 +21,7 @@ const PE = ({ role, classId }) => {
                     const { selectedProducts } = await fetchStudentProducts(controller.signal);
                     const { allProducts } = await fetchAllProductsforStudents(controller.signal);
                     
-                    // Combina todos os produtos únicos
+                    // Combine unique products
                     const allUniqueProducts = [...selectedProducts];
                     allProducts.forEach(item => {
                         if (!selectedProducts.some(product => item.id === product.id)) {
@@ -29,15 +29,14 @@ const PE = ({ role, classId }) => {
                         }
                     });
                     
-                    // Redistribui 6 primeiros e 3 restantes
-                    setSelectedProducts(allUniqueProducts.slice(0, 6));
-                    setAllProducts(allUniqueProducts.slice(6, 9));
+                    // UPDATED: Show 3 in top section, 6 in bottom section
+                    setSelectedProducts(allUniqueProducts.slice(0, 3));
+                    setAllProducts(allUniqueProducts.slice(3, 9));
 
                 } else if (role === "Professor") {
                     const { selectedProducts } = await fetchProfessorProducts(classId, controller.signal);
                     const { allProducts } = await fetchAllProductsforProfessor(classId, controller.signal);
                     
-                    // Combina todos os produtos (sem filtrar por id, pois a lógica de Professor trata os arrays separadamente)
                     const combinedProducts = [...selectedProducts];
                     allProducts.forEach(item => {
                         if (!selectedProducts.some(product => item.id === product.id)) {
@@ -45,12 +44,12 @@ const PE = ({ role, classId }) => {
                         }
                     });
                     
-                    // Ordena por score (maior primeiro)
+                    // Sort by score
                     const sortedProducts = combinedProducts.sort((a, b) => b.score - a.score);
                     
-                    // Redistribui 6 primeiros e 3 restantes
-                    setSelectedProducts(sortedProducts.slice(0, 6));
-                    setAllProducts(sortedProducts.slice(6, 9));
+                    // UPDATED: Show 3 in top section, 6 in bottom section
+                    setSelectedProducts(sortedProducts.slice(0, 3));
+                    setAllProducts(sortedProducts.slice(3, 9));
                 }
             } catch (error) {
                 if (error.name !== 'AbortError') {
@@ -76,10 +75,8 @@ const PE = ({ role, classId }) => {
 
     const handleClick = (code) => { 
         if (role === "Professor" && classId) {
-            // Include classId in the URL for professors
             navigate(`/educational-product/${code}/class/${classId}`);
         } else {
-            // Default behavior for students
             navigate(`/educational-product/${code}`);
         }
     }
@@ -104,13 +101,16 @@ const PE = ({ role, classId }) => {
                         }
                     </div>
                 </div>
+                
+                {/* --- TOP SECTION (3 ITEMS) --- */}
                 <div className="recommendation-subtitle">
                     <h2>Produtos recomendados</h2>
                 </div>
                 <div className="selected-recommendation">
                     {loading ? ( 
                         <div className="recommendation-card-content">
-                            {[...Array(6)].map((_, index) => ( 
+                            {/* Loading 3 skeletons */}
+                            {[...Array(3)].map((_, index) => ( 
                                 <CardSkeleton key={index} /> 
                             ))}
                         </div>    
@@ -133,13 +133,15 @@ const PE = ({ role, classId }) => {
 
                 <hr style={{ margin: '1.5rem 0' }}/> 
 
+                {/* --- BOTTOM SECTION (6 ITEMS) --- */}
                 <div className="all-recommendations" data-tutorial="recommendation-subtitle-tutorial">
                     <div className="recommendation-subtitle">
                         <h2>Mais produtos educacionais</h2>
                     </div>
                     {loading ? (
                         <div className="recommendation-card-content">
-                            {[...Array(3)].map((_, index) => ( 
+                            {/* Loading 6 skeletons */}
+                            {[...Array(6)].map((_, index) => ( 
                                 <CardSkeleton key={index} /> 
                             ))}
                         </div>
@@ -151,7 +153,7 @@ const PE = ({ role, classId }) => {
                                     code={product.code}
                                     name={product.name}
                                     description={product.description}
-                                    relevance={6 + index + 1} 
+                                    relevance={3 + index + 1} // Starts counting after the top 3
                                     score={product.score}
                                     handleClick={handleClick}
                                     data-tutorial={index}
