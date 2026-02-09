@@ -29,6 +29,13 @@ export default {
       recommendationToStudent: "/survey/recommendation-to-student",
       ratingRegister: "/survey/rating/register",
       favoriteRegister: "/survey/favorite/register",
+      // New Endpoints
+      suggest: "/survey/product/suggest",
+      educationalTypes: "/survey/educational-types",
+    },
+    admin: {
+        pendingProducts: "/survey/admin/pending-products",
+        reviewProduct: "/survey/admin/product/${productId}/review",
     },
     methodologies: {
       all: "/survey/methodology/all",
