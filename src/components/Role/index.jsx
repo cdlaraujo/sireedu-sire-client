@@ -11,6 +11,7 @@ import Dialog from '@mui/material/Dialog';
 import { blue } from '@mui/material/colors';
 import FaceIcon from '@mui/icons-material/Face';
 import SchoolIcon from '@mui/icons-material/School';
+import RateReviewIcon from '@mui/icons-material/RateReview'; // Novo ícone
 
 const Role = (props) => {
     const { onClose, availableRoles, selectedValue, open } = props;
@@ -22,9 +23,11 @@ const Role = (props) => {
                 return { name: 'Estudante', value: role, icon: <FaceIcon /> };
             } else if (role === 'Professor') {
                 return { name: 'Professor', value: role, icon: <SchoolIcon /> };
+            } else if (role === 'Revisor') {
+                return { name: 'Revisor', value: role, icon: <RateReviewIcon /> };
             }
             return null;
-        }).filter(Boolean);
+        }).filter(Boolean); // Remove nulos (como 'Admin' se não tiver ícone definido)
     
         setRoles(newRoles);
     }, [availableRoles]);

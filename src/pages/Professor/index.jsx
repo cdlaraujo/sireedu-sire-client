@@ -17,9 +17,9 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ImportantDevicesIcon from '@mui/icons-material/ImportantDevices';
 import ExtensionIcon from '@mui/icons-material/Extension';
 import Pagination from '@mui/material/Pagination';
-
-// IMPORT THE NEW CARD
+import ConstructionIcon from '@mui/icons-material/Construction'; // Import icon
 import ClassCard from "./ClassCard";
+import SuggestionDialog from "./SuggestionDialog"; // Import Dialog
 
 const Professor = () => {
     const { fetchEntryPoint } = useFetch();
@@ -33,6 +33,9 @@ const Professor = () => {
     // Tutorial
     const [showTutorial, setShowTutorial] = useState(false);
     const [currentTutorialStep, setCurrentTutorialStep] = useState(0);
+
+    // Suggestion Dialog
+    const [openSuggestionModal, setOpenSuggestionModal] = useState(false);
 
     // Pagination
     const [page, setPage] = useState(1);
@@ -154,7 +157,8 @@ const Professor = () => {
             return [
                 { targetSelector: '.professor-header', title: 'Painel da Turma', description: 'Aqui você visualiza os dados detalhados da turma selecionada.' },
                 { targetSelector: '.professor-datatable-section', title: 'Relatórios', description: 'Acesse os relatórios Sintético e Analítico para ver o perfil dos alunos.' },
-                { targetSelector: '[data-tutorial="materiais-de-apoio"]', title: 'Recomendações', description: 'Com base nos resultados, o sistema gera recomendações de materiais e metodologias.' }
+                { targetSelector: '[data-tutorial="recommendation-group"]', title: 'Recomendações', description: 'Com base nos resultados, o sistema gera recomendações de materiais e metodologias.' },
+                { targetSelector: '.craft-mode-container', title: 'Modo Criação', description: 'Você também pode sugerir novos materiais educativos para enriquecer a plataforma.' }
             ];
         }
     };
@@ -175,14 +179,15 @@ const Professor = () => {
                             <Skeleton variant="rectangular" height={200} sx={{mt: 2, borderRadius: 2}} />
                         ) : (
                             <>
+                                {/* UPDATED LAYOUT STYLE TO FLEXBOX */}
                                 <div style={{ 
-                                    display: 'grid',
-                                    gridTemplateColumns: displayedClasses.length === 1 ? '1fr' : 'repeat(2, 1fr)',
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    justifyContent: 'center',
                                     gap: '24px', 
-                                    maxWidth: displayedClasses.length === 1 ? '400px' : '1000px',
+                                    maxWidth: '800px', // Reduced max-width to keep them tighter
                                     margin: '2rem auto 0',
-                                    padding: '0 20px',
-                                    justifyItems: 'center'
+                                    padding: '0 10px',
                                 }}>
                                     {displayedClasses.map((cls) => (
                                         <ClassCard 
@@ -285,10 +290,33 @@ const Professor = () => {
                                 />   
                             </div>
                         </div>
+
+                        {/* --- CRAFT MODE BUTTON --- */}
+                        <div className="craft-mode-container" style={{ marginTop: '2rem', textAlign: 'center', borderTop: '1px solid #eee', paddingTop: '2rem' }}>
+                            <p className="secondary-text" style={{fontSize: '1rem', marginBottom: '10px'}}>
+                                Conhece algum material que pode ajudar?
+                            </p>
+                            <Button 
+                                variant="outlined" 
+                                color="secondary"
+                                startIcon={<ConstructionIcon />}
+                                onClick={() => setOpenSuggestionModal(true)}
+                                sx={{ borderRadius: '20px', padding: '10px 24px' }}
+                            >
+                                Modo Criação: Sugerir Produto
+                            </Button>
+                        </div>
                     </div>
                 )}
             </div>
             
+            {/* Suggestion Dialog */}
+            <SuggestionDialog 
+                open={openSuggestionModal} 
+                onClose={() => setOpenSuggestionModal(false)}
+                classId={selectedClass?.id} // Pass class ID!
+            />
+
             <TutorialGuide 
                 steps={getTutorialSteps()}
                 isOpen={showTutorial}

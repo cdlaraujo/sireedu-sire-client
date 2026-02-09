@@ -49,7 +49,8 @@ const AppRouter = () => {
                     <Route
                         path="/home"
                         element={
-                            <PrivateRoute roles={["Professor", "Student"]}>
+                            // Added "Revisor" here
+                            <PrivateRoute roles={["Professor", "Student", "Revisor"]}>
                                 <RoleBasedComponent />
                             </PrivateRoute>
                         }

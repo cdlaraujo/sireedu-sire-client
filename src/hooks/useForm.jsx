@@ -1,10 +1,11 @@
+import { useCallback } from "react";
 import api from "../services/api";
 import config from "../services/config";
 import handleError from "./handleError";
 
 const useForm = () => {
 
-    const requestPasswordReset = async (email) => {
+    const requestPasswordReset = useCallback(async (email) => {
         try {
             const clientViewUrl = "/password-request-confirmation";
             const response = await api.post(config.passwordResetRequestUrl, {
@@ -21,9 +22,9 @@ const useForm = () => {
             console.error("Error request password reset:", error);
             return { success: false, message: handleError(error) };
         }
-    };
+    }, []);
 
-    const resetPassword = async (token, password) => {
+    const resetPassword = useCallback(async (token, password) => {
         try {
             const response = await api.post(config.passwordResetConfirmUrl, {
                 token,
@@ -39,9 +40,9 @@ const useForm = () => {
             console.error("Error reset password:", error);
             return { success: false, message: handleError(error) };
         }
-    };
+    }, []);
 
-    const signUp = async (signUpObj) => {
+    const signUp = useCallback(async (signUpObj) => {
         try {
             const response = await api.post(config.student.signupUrl, signUpObj);
             const { status } = response;
@@ -53,9 +54,9 @@ const useForm = () => {
             console.error("Error signup:", error);
             return { success: false, message: handleError(error) };
         }
-    };
+    }, []);
 
-    const processAnswer = async (studyId, answers) => {
+    const processAnswer = useCallback(async (studyId, answers) => {
         try {
             const payload = {'answers': answers};
             const url = `/survey/study/${studyId}/process`;
@@ -68,9 +69,9 @@ const useForm = () => {
             console.error("Error process answer:", error);
             return { success: false, message: handleError(error) };
         }
-    };
+    }, []);
 
-    const registerRecommendation = async (productId) => {
+    const registerRecommendation = useCallback(async (productId) => {
         try {
             const { data } = await api.post(config.products.recommendationToStudent, {
                 'product_id': productId,
@@ -80,9 +81,9 @@ const useForm = () => {
             console.error('Error posting register recommendation:', error);
             return { success: false, message: handleError(error) };
         }
-    };
+    }, []);
 
-    const registerRating = async (productId, ratingValue) => {
+    const registerRating = useCallback(async (productId, ratingValue) => {
         try {
             const { data } = await api.post(config.products.ratingRegister, {
                 'product_id': productId,
@@ -94,9 +95,9 @@ const useForm = () => {
             console.error('Error posting register rating:', error);
             return { success: false, message: handleError(error) };
         }
-    };
+    }, []);
 
-    const registerFavorite = async (productId) => {
+    const registerFavorite = useCallback(async (productId) => {
         try {
             const { data } = await api.post(config.products.favoriteRegister, {
                 'product_id': productId,
@@ -106,7 +107,35 @@ const useForm = () => {
             console.error('Error posting register favorite:', error);
             return { success: false, message: handleError(error) };
         }
-    }
+    }, []);
+
+    // --- New Functions (Suggestions & Revisor) ---
+
+    const suggestProduct = useCallback(async (productData) => {
+        try {
+            const response = await api.post(config.products.suggest, productData);
+            if (response.status === 201) {
+                return { success: true };
+            }
+        } catch (error) {
+            console.error("Error suggesting product:", error);
+            return { success: false, message: handleError(error) };
+        }
+    }, []);
+
+    // CORRECTED: Accepts a generic `data` object to support editing + action
+    const reviewProduct = useCallback(async (productId, data) => {
+        try {
+            const url = config.admin.reviewProduct.replace("${productId}", productId);
+            const response = await api.post(url, data); 
+            if (response.status === 200) {
+                return { success: true };
+            }
+        } catch (error) {
+            console.error("Error reviewing product:", error);
+            return { success: false, message: handleError(error) };
+        }
+    }, []);
 
     return {
         requestPasswordReset,
@@ -116,6 +145,8 @@ const useForm = () => {
         registerRecommendation,
         registerRating,
         registerFavorite,
+        suggestProduct,
+        reviewProduct
     }
 
 };
