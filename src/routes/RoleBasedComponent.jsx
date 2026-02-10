@@ -2,7 +2,7 @@ import React from "react";
 import { Navigate } from "react-router-dom";
 import Student from "../pages/Student";
 import Professor from "../pages/Professor";
-import RevisorDashboard from "../pages/RevisorDashboard"; // New Page
+import RevisorDashboard from "../pages/RevisorDashboard"; // Importe a nova tela
 import config from "../services/config";
 
 const RoleBasedComponent = () => {

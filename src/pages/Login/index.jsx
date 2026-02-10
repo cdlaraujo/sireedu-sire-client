@@ -29,7 +29,8 @@ const Login = () => {
 
     const [openRoleDialog, setOpenRoleDialog] = useState(false);
     
-    const availableRoles = ['Student', 'Professor'];
+    // CORREÇÃO: Transformei em estado para receber dados do backend
+    const [availableRoles, setAvailableRoles] = useState([]);
 
     const validateEmail = () => {
         const allowedDomains = ["unifesp.br", "ifsp.edu.br", "aluno.ifsp.edu.br", "edu.azores.gov.pt", "ime.unicamp.br"];
@@ -70,7 +71,8 @@ const Login = () => {
         setLoading(true);
         try {
             await handleLogin(username, password, selectedRole, (roles) => {
-                // setAvailableRoles(roles);
+                // CORREÇÃO: Atualiza o estado com os papéis vindos do banco
+                setAvailableRoles(roles);
                 setOpenRoleDialog(true);
             });
             setMessageType("success");
