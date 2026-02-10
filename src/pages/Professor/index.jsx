@@ -314,7 +314,8 @@ const Professor = () => {
             <SuggestionDialog 
                 open={openSuggestionModal} 
                 onClose={() => setOpenSuggestionModal(false)}
-                classId={selectedClass?.id} // Pass class ID!
+                initialClassId={selectedClass?.id} 
+                professorClasses={uniqueClasses} // NOVA PROP: Passando todas as turmas
             />
 
             <TutorialGuide 

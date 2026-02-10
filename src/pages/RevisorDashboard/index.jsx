@@ -30,6 +30,7 @@ import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import ListItemText from '@mui/material/ListItemText';
+import CircularProgress from '@mui/material/CircularProgress'; // Importado
 
 const stylesList = [
     { code: 'ATIVO', description: 'Ativo' },
@@ -55,7 +56,8 @@ const RevisorDashboard = () => {
     
     const [pendingProducts, setPendingProducts] = useState([]);
     const [types, setTypes] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true); // Loading para buscar dados da tabela
+    const [processing, setProcessing] = useState(false); // Loading para ações de envio (botões)
     const [snackState, setSnackState] = useState({ open: false, message: '', type: 'success' });
     
     // Edit Dialog State
@@ -129,40 +131,46 @@ const RevisorDashboard = () => {
             return;
         }
 
-        // Step 2: Prepare Payload
-        // We copy editForm properties into the payload
-        const payload = { 
-            ...editForm, 
-            action: action // Add action explicitly
-        };
-        
-        // Clean up rejection reason if approving
-        if (action === 'APPROVE') {
-            delete payload.rejection_reason;
-        } else {
-            // Ensure reason is mapped correctly for backend
-            payload.reason = editForm.rejection_reason; 
-        }
+        setProcessing(true); // Inicia indicador de carregamento
 
-        // Step 3: Call API via Hook
-        // Note: reviewProduct signature in useForm.jsx is (productId, data)
-        const result = await reviewProduct(selectedProduct.id, payload);
+        try {
+            // Step 2: Prepare Payload
+            const payload = { 
+                ...editForm, 
+                action: action // Add action explicitly
+            };
+            
+            // Clean up rejection reason if approving
+            if (action === 'APPROVE') {
+                delete payload.rejection_reason;
+            } else {
+                payload.reason = editForm.rejection_reason; 
+            }
 
-        // Step 4: Handle Response
-        if (result.success) {
-            setSnackState({ 
-                open: true, 
-                message: action === 'APPROVE' ? 'Produto aprovado com sucesso!' : 'Produto rejeitado.', 
-                type: 'success' 
-            });
-            setOpenDialog(false); // Close dialog
-            loadData(); // Refresh list
-        } else {
-            setSnackState({ 
-                open: true, 
-                message: result.message || 'Erro ao processar revisão.', 
-                type: 'error' 
-            });
+            // Step 3: Call API via Hook
+            const result = await reviewProduct(selectedProduct.id, payload);
+
+            // Step 4: Handle Response
+            if (result.success) {
+                setSnackState({ 
+                    open: true, 
+                    message: action === 'APPROVE' ? 'Produto aprovado com sucesso!' : 'Produto rejeitado.', 
+                    type: 'success' 
+                });
+                setOpenDialog(false); // Close dialog
+                loadData(); // Refresh list
+            } else {
+                setSnackState({ 
+                    open: true, 
+                    message: result.message || 'Erro ao processar revisão.', 
+                    type: 'error' 
+                });
+            }
+        } catch (error) {
+            console.error("Erro no envio:", error);
+            setSnackState({ open: true, message: 'Erro inesperado.', type: 'error' });
+        } finally {
+            setProcessing(false); // Finaliza indicador de carregamento
         }
     };
 
@@ -236,7 +244,7 @@ const RevisorDashboard = () => {
             
             {/* --- Review Dialog --- */}
             {selectedProduct && (
-                <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
+                <Dialog open={openDialog} onClose={() => !processing && setOpenDialog(false)} maxWidth="md" fullWidth>
                     <DialogTitle>Revisar Sugestão</DialogTitle>
                     <DialogContent dividers>
                         {isRejecting ? (
@@ -252,6 +260,7 @@ const RevisorDashboard = () => {
                                 onChange={handleFormChange}
                                 error={!editForm.rejection_reason}
                                 helperText="Obrigatório para rejeitar"
+                                disabled={processing}
                             />
                         ) : (
                             <div className="review-form-grid">
@@ -263,6 +272,7 @@ const RevisorDashboard = () => {
                                     variant="outlined"
                                     value={editForm.name}
                                     onChange={handleFormChange}
+                                    disabled={processing}
                                 />
                                 <TextField
                                     margin="dense"
@@ -272,6 +282,7 @@ const RevisorDashboard = () => {
                                     variant="outlined"
                                     value={editForm.link}
                                     onChange={handleFormChange}
+                                    disabled={processing}
                                 />
                                 <FormControl fullWidth margin="dense">
                                     <InputLabel>Tipo</InputLabel>
@@ -280,6 +291,7 @@ const RevisorDashboard = () => {
                                         value={editForm.type_id}
                                         label="Tipo"
                                         onChange={handleFormChange}
+                                        disabled={processing}
                                     >
                                         {types.map((t) => <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>)}
                                     </Select>
@@ -296,12 +308,13 @@ const RevisorDashboard = () => {
                                             value="true" 
                                             control={<Radio />} 
                                             label={`Restrito à Turma: ${selectedProduct.suggested_for_class_name || "N/A"}`} 
-                                            disabled={!selectedProduct.suggested_for_class_name}
+                                            disabled={!selectedProduct.suggested_for_class_name || processing}
                                         />
                                         <FormControlLabel 
                                             value="false" 
                                             control={<Radio />} 
                                             label="Global (Visível para todos)" 
+                                            disabled={processing}
                                         />
                                     </RadioGroup>
                                 </FormControl>
@@ -316,6 +329,7 @@ const RevisorDashboard = () => {
                                     variant="outlined"
                                     value={editForm.description}
                                     onChange={handleFormChange}
+                                    disabled={processing}
                                 />
 
                                 {/* Tags */}
@@ -328,6 +342,7 @@ const RevisorDashboard = () => {
                                             value={editForm.styles}
                                             onChange={handleFormChange}
                                             renderValue={(selected) => selected.join(', ')}
+                                            disabled={processing}
                                         >
                                             {stylesList.map((style) => (
                                                 <MenuItem key={style.code} value={style.code}>
@@ -346,6 +361,7 @@ const RevisorDashboard = () => {
                                             value={editForm.intelligences}
                                             onChange={handleFormChange}
                                             renderValue={(selected) => selected.join(', ')}
+                                            disabled={processing}
                                         >
                                             {intelligencesList.map((im) => (
                                                 <MenuItem key={im.code} value={im.code}>
@@ -360,11 +376,12 @@ const RevisorDashboard = () => {
                         )}
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={() => setOpenDialog(false)}>Cancelar</Button>
+                        <Button onClick={() => setOpenDialog(false)} disabled={processing}>Cancelar</Button>
                         {!isRejecting && (
                              <Button 
                                 onClick={() => submitReview('REJECT')} 
                                 color="error"
+                                disabled={processing}
                             >
                                 Rejeitar
                             </Button>
@@ -374,8 +391,9 @@ const RevisorDashboard = () => {
                                 onClick={() => submitReview('REJECT')} 
                                 color="error"
                                 variant="contained"
+                                disabled={processing}
                             >
-                                Confirmar Rejeição
+                                {processing ? <CircularProgress size={24} color="inherit" /> : "Confirmar Rejeição"}
                             </Button>
                         )}
                         {!isRejecting && (
@@ -383,8 +401,9 @@ const RevisorDashboard = () => {
                                 onClick={() => submitReview('APPROVE')} 
                                 color="success" 
                                 variant="contained"
+                                disabled={processing}
                             >
-                                Salvar e Aprovar
+                                {processing ? <CircularProgress size={24} color="inherit" /> : "Salvar e Aprovar"}
                             </Button>
                         )}
                     </DialogActions>
